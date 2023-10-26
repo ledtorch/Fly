@@ -15,7 +15,7 @@ export default {
     window.removeEventListener('resize', this.onWindowResize);
   },
   methods: {
-    async initThree() {
+    initThree() {
       const container = this.$refs.container;
       const width = window.innerWidth;
       const height = window.innerHeight;
@@ -29,10 +29,7 @@ export default {
       camera.position.z = 5;
 
       // Create renderer
-      // const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      // ↓ Hight performance mode
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(width, height);
       container.appendChild(renderer.domElement);
 
@@ -44,18 +41,6 @@ export default {
       const dotsSphere = this.createDotsSphere();
       scene.add(dotsSphere);
 
-      // Wrap model to a unit
-      const earthGroup = new THREE.Group();
-      earthGroup.add(coreSphere);
-      earthGroup.add(dotsSphere);
-      scene.add(earthGroup);
-
-      try {
-        const dotsSphere = await this.createDotsSphere();
-        earthGroup.add(dotsSphere);
-      } catch (error) {
-        console.error('Error creating dots sphere:', error);
-      }
 
       const light = new THREE.DirectionalLight(0xffffff, 1);
       light.position.set(1, 1, 1).normalize();
@@ -72,7 +57,6 @@ export default {
       // Animation loop
       const animate = () => {
         requestAnimationFrame(animate);
-        earthGroup.rotation.y += 0.01;
         renderer.render(scene, camera);
       };
       animate();
@@ -84,9 +68,9 @@ export default {
       console.log(renderer);
 
     },
-    async createDotsSphere() {
+    createDotsSphere() {
       // Dots number
-      const DOT_COUNT = 20000;
+      const DOT_COUNT = 18000;
 
       const dotMaterial = new THREE.MeshBasicMaterial({
         color: 0x1b2d53ff,
@@ -94,58 +78,37 @@ export default {
         transparent: true,
       });
 
-      // Load the color-coded image then get each pixel’s color
-      const loader = new THREE.TextureLoader();
-      const texture = await new Promise((resolve, reject) => {
-        loader.load(
-          '/Image/Map.png',
-          resolve,  // onLoad callback
-          undefined,  // onProgress callback (not needed)
-          reject  // onError callback
-        );
-      });
+      // The XYZ coordinate of each dot
+      const positions = [];
 
-      const image = texture.image;
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext('2d');
-      context.drawImage(image, 0, 0);
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      // A random identifier for each dot
+      const rndId = [];
+
+      // The country border each dot falls within
+      const countryIds = [];
+
 
       const vector = new THREE.Vector3();
+      // Create a group to hold all dots
       const sceneDots = new THREE.Group();
-
       for (let i = DOT_COUNT; i >= 0; i--) {
         const phi = Math.acos(-1 + (2 * i) / DOT_COUNT);
         const theta = Math.sqrt(DOT_COUNT * Math.PI) * phi;
-        vector.setFromSphericalCoords(2.5, phi, theta);
 
-        // Convert spherical coordinates to UV coordinates
-        const uv = {
-          x: (theta + Math.PI) / (2 * Math.PI),
-          y: phi / Math.PI
-        };
+        vector.setFromSphericalCoords(2.5, phi, theta);  // Adjust radius to match the sphere radius
 
-        // Get the corresponding pixel color on the map
-        const pixelIndex = ((Math.floor(uv.y * (canvas.height - 1)) * canvas.width) + Math.floor(uv.x * (canvas.width - 1))) * 4;
-        const r = imageData.data[pixelIndex];
-        const g = imageData.data[pixelIndex + 1];
-        const b = imageData.data[pixelIndex + 2];
+        // Create dots
+        const dotGeometry = new THREE.CircleGeometry(0.02, 5);
+        const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+        dot.position.set(vector.x, vector.y, vector.z);
+        dot.lookAt(new THREE.Vector3(0, 0, 0));
 
-        // Check if the pixel color represents land
-        if (r === 255 && g === 255 && b === 255) {  // Assuming white represents land
-          const dotGeometry = new THREE.CircleGeometry(0.02, 5);
-          const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-          dot.position.set(vector.x, vector.y, vector.z);
-          dot.lookAt(new THREE.Vector3(0, 0, 0));
-          sceneDots.add(dot);
-        }
+        // Add each dot to the group
+        sceneDots.add(dot);
       }
 
       return sceneDots;
     },
-
     createCoreSphere() {
       /* 
       Opaque objects are drawn first, followed by transparent objects.
@@ -154,7 +117,7 @@ export default {
       const coreMaterial = new THREE.MeshPhongMaterial({
         color: 0x1a2c52ff,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.1,
         depthTest: true,
       });
 
