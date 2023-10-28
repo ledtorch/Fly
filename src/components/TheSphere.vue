@@ -24,9 +24,9 @@ export default {
       const scene = new THREE.Scene();
 
       // Create camera
-      const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
       // Adjust this value to fit the sphere within 500px diameter
-      camera.position.z = 5;
+      camera.position.z = 6;
 
       // Create renderer
       // const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -72,7 +72,7 @@ export default {
       // Animation loop
       const animate = () => {
         requestAnimationFrame(animate);
-        earthGroup.rotation.y += 0.01;
+        earthGroup.rotation.y += 0.007;
         renderer.render(scene, camera);
       };
       animate();
@@ -86,7 +86,7 @@ export default {
     },
     async createDotsSphere() {
       // Dots number
-      const DOT_COUNT = 20000;
+      const DOT_COUNT = 30000;
 
       const dotMaterial = new THREE.MeshBasicMaterial({
         color: 0x1b2d53ff,
@@ -98,7 +98,7 @@ export default {
       const loader = new THREE.TextureLoader();
       const texture = await new Promise((resolve, reject) => {
         loader.load(
-          '/Image/Map.png',
+          '/Image/Map3.png',
           resolve,  // onLoad callback
           undefined,  // onProgress callback (not needed)
           reject  // onError callback
@@ -123,7 +123,7 @@ export default {
 
         // Convert spherical coordinates to UV coordinates
         const uv = {
-          x: (theta + Math.PI) / (2 * Math.PI),
+          x: 1 - ((theta + Math.PI) / (2 * Math.PI)),
           y: phi / Math.PI
         };
 
@@ -134,7 +134,7 @@ export default {
         const b = imageData.data[pixelIndex + 2];
 
         // Check if the pixel color represents land
-        if (r === 255 && g === 255 && b === 255) {  // Assuming white represents land
+        if (r === 0 && g === 0 && b === 0) {  // Assuming white represents land
           const dotGeometry = new THREE.CircleGeometry(0.02, 5);
           const dot = new THREE.Mesh(dotGeometry, dotMaterial);
           dot.position.set(vector.x, vector.y, vector.z);
@@ -154,13 +154,21 @@ export default {
       const coreMaterial = new THREE.MeshPhongMaterial({
         color: 0x1a2c52ff,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0,
         depthTest: true,
       });
 
       const sphereRadius = 2.48;
-      const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
-      const coreSphere = new THREE.Mesh(sphereGeometry, coreMaterial);
+
+      // Test
+      const textureLoader = new THREE.TextureLoader();
+      const mapTexture = textureLoader.load('/Image/Map3.png');
+      const sphereGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+      const sphereMaterial = new THREE.MeshBasicMaterial({ map: mapTexture });
+      const coreSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+
+      // const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
+      // const coreSphere = new THREE.Mesh(sphereGeometry, coreMaterial);
 
       return coreSphere;
     },
