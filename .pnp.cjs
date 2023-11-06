@@ -30,7 +30,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["@vitejs/plugin-vue", "virtual:ba4304283690bc60ec28e85757c4d4d0936f5d368408eb35d508a55d2d1069a94605afa1ba5cbcb85de408af40a759a51588578d2092967b5dbbfec581c7147e#npm:4.4.0"],\
             ["autoprefixer", "virtual:ba4304283690bc60ec28e85757c4d4d0936f5d368408eb35d508a55d2d1069a94605afa1ba5cbcb85de408af40a759a51588578d2092967b5dbbfec581c7147e#npm:10.4.16"],\
-            ["axios", "npm:1.5.1"],\
+            ["axios", "npm:1.6.0"],\
             ["postcss", "npm:8.4.31"],\
             ["sass", "npm:1.69.4"],\
             ["three", "npm:0.157.0"],\
@@ -642,11 +642,11 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["axios", [\
-        ["npm:1.5.1", {\
-          "packageLocation": "./.yarn/cache/axios-npm-1.5.1-6bc68e7d25-4444f06601.zip/node_modules/axios/",\
+        ["npm:1.6.0", {\
+          "packageLocation": "./.yarn/cache/axios-npm-1.6.0-b0f6015a96-c7c9f2ae9e.zip/node_modules/axios/",\
           "packageDependencies": [\
-            ["axios", "npm:1.5.1"],\
-            ["follow-redirects", "virtual:6bc68e7d25b7055a51c269c1fa5648c8246286db1b7949168396e2ffbde7ed58cf742783c99b4e376ba9a3e96fcc4d029f96bd1b532b606b5055545461060ec6#npm:1.15.3"],\
+            ["axios", "npm:1.6.0"],\
+            ["follow-redirects", "virtual:b0f6015a963175f08000990853b55c1a6d1a3722c7c1d5e0885425211ae7ee63bf6b96b7e997f23d1bc9573bb78556c981010ca3a2873c90fc1ce293c6dd5667#npm:1.15.3"],\
             ["form-data", "npm:4.0.0"],\
             ["proxy-from-env", "npm:1.1.0"]\
           ],\
@@ -1034,10 +1034,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "SOFT"\
         }],\
-        ["virtual:6bc68e7d25b7055a51c269c1fa5648c8246286db1b7949168396e2ffbde7ed58cf742783c99b4e376ba9a3e96fcc4d029f96bd1b532b606b5055545461060ec6#npm:1.15.3", {\
-          "packageLocation": "./.yarn/__virtual__/follow-redirects-virtual-ddb0bfe676/0/cache/follow-redirects-npm-1.15.3-ca69c47b72-584da22ec5.zip/node_modules/follow-redirects/",\
+        ["virtual:b0f6015a963175f08000990853b55c1a6d1a3722c7c1d5e0885425211ae7ee63bf6b96b7e997f23d1bc9573bb78556c981010ca3a2873c90fc1ce293c6dd5667#npm:1.15.3", {\
+          "packageLocation": "./.yarn/__virtual__/follow-redirects-virtual-48f349e0aa/0/cache/follow-redirects-npm-1.15.3-ca69c47b72-584da22ec5.zip/node_modules/follow-redirects/",\
           "packageDependencies": [\
-            ["follow-redirects", "virtual:6bc68e7d25b7055a51c269c1fa5648c8246286db1b7949168396e2ffbde7ed58cf742783c99b4e376ba9a3e96fcc4d029f96bd1b532b606b5055545461060ec6#npm:1.15.3"],\
+            ["follow-redirects", "virtual:b0f6015a963175f08000990853b55c1a6d1a3722c7c1d5e0885425211ae7ee63bf6b96b7e997f23d1bc9573bb78556c981010ca3a2873c90fc1ce293c6dd5667#npm:1.15.3"],\
             ["@types/debug", null],\
             ["debug", null]\
           ],\
@@ -1178,7 +1178,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["global", "workspace:."],\
             ["@vitejs/plugin-vue", "virtual:ba4304283690bc60ec28e85757c4d4d0936f5d368408eb35d508a55d2d1069a94605afa1ba5cbcb85de408af40a759a51588578d2092967b5dbbfec581c7147e#npm:4.4.0"],\
             ["autoprefixer", "virtual:ba4304283690bc60ec28e85757c4d4d0936f5d368408eb35d508a55d2d1069a94605afa1ba5cbcb85de408af40a759a51588578d2092967b5dbbfec581c7147e#npm:10.4.16"],\
-            ["axios", "npm:1.5.1"],\
+            ["axios", "npm:1.6.0"],\
             ["postcss", "npm:8.4.31"],\
             ["sass", "npm:1.69.4"],\
             ["three", "npm:0.157.0"],\

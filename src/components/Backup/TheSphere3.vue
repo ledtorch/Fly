@@ -1,18 +1,12 @@
 <template>
   <div class="frame" ref="frame" />
   <div ref="container" id="container" />
-  <!-- <button @click="fetchFlightData" class="fetch">Fetch Data</button> -->
-  <button @click="drawFlightRoute(37.7749, -122.4194, 25.0330, 121.5654)" class="fetch">Draw Flight Route</button>
-  <!-- SFK (San Francisco) lat/lon: 37.7749, -122.4194 -->
-  <!-- TPE (Taipei) lat/lon: 25.0330, 121.5654 -->
 </template>
 
 <script>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import axios from 'axios';
-import { TubeGeometry } from 'three';
 
 export default {
   mounted() {
@@ -52,6 +46,10 @@ export default {
       // Add dotsSphere
       const dotsSphere = this.createDotsSphere();
       scene.add(dotsSphere);
+
+      // // Add sampleSphere
+      // const sampleSphere = this.createSample();
+      // scene.add(sampleSphere);
 
       // Wrap model to a unit
       const earthGroup = new THREE.Group();
@@ -136,8 +134,7 @@ export default {
         };
 
         // Get the corresponding pixel color on the map
-        // 🏗️ TODO: The issue with UV mapping requires the app to start rendering from "canvas.height - 150" instead of 0
-        const pixelIndex = ((Math.floor(uv.y * (canvas.height - 150)) * canvas.width) + Math.floor(uv.x * (canvas.width))) * 4;
+        const pixelIndex = ((Math.floor(uv.y * (canvas.height - 1)) * canvas.width) + Math.floor(uv.x * (canvas.width - 1))) * 4;
         const r = imageData.data[pixelIndex];
         const g = imageData.data[pixelIndex + 1];
         const b = imageData.data[pixelIndex + 2];
@@ -174,55 +171,63 @@ export default {
       return coreSphere;
     },
 
-    createCurve(startLat, startLon, endLat, endLon, radius) {
-      const startXYZ = toXYZ(startLat, startLon, radius);
-      const endXYZ = toXYZ(endLat, endLon, radius);
+    createSample() {
+      // Define scene constants similar to your reference code
+      const SPHERE_RADIUS = 2.5;
+      const LATITUDE_COUNT = 80;
+      const DOT_DENSITY = 10;
+      const DOT_SIZE = 0.01;
+      const DOT_COLOR = 0xffffff;
 
-      // Calculate intermediate control points for the bezier curve
-      const arcHeight = startXYZ.distanceTo(endXYZ) * 0.5 + radius;
-      const controlXYZ1 = toXYZ((startLat + endLat) / 2, (startLon + endLon) / 2, arcHeight);
-      const controlXYZ2 = toXYZ((startLat + endLat) / 2, (startLon + endLon) / 2, arcHeight);
+      // Define an array to hold the geometries of all the dots
+      const dotGeometries = [];
+      // Create a blank vector to be used by the dots
+      const vector = new THREE.Vector3();
 
-      return new THREE.CubicBezierCurve3(startXYZ, controlXYZ1, controlXYZ2, endXYZ);
-    },
+      // Loop across the latitude lines
+      for (let lat = 0; lat < LATITUDE_COUNT; lat += 1) {
+        // Calculate the radius of the latitude line.
+        const radius =
+          Math.cos((-90 + (180 / LATITUDE_COUNT) * lat) * (Math.PI / 180)) *
+          SPHERE_RADIUS;
+        // Calculate the circumference of the latitude line.
+        const latitudeCircumference = radius * Math.PI * 2 * 2;
+        // Calculate the number of dots required for the latitude line.
+        const latitudeDotCount = Math.ceil(latitudeCircumference * DOT_DENSITY);
 
-    drawFlightRoute(startLat, startLon, endLat, endLon) {
-      if (!this.scene) {
-        console.error('The scene is not initialized.');
-        return;
+        // Loop across the dot count for the latitude line.
+        for (let dot = 0; dot < latitudeDotCount; dot += 1) {
+          const dotGeometry = new THREE.CircleGeometry(DOT_SIZE, 5);
+          // Calculate the phi and theta angles for the dot.
+          const phi = (Math.PI / LATITUDE_COUNT) * lat;
+          const theta = ((2 * Math.PI) / latitudeDotCount) * dot;
+
+          // Set the vector using the spherical coordinates generated from the sphere radius, phi and theta.
+          vector.setFromSphericalCoords(SPHERE_RADIUS, phi, theta);
+
+          // Make sure the dot is facing in the right direction.
+          dotGeometry.lookAt(vector);
+
+          // Move the dot geometry into position.
+          dotGeometry.translate(vector.x, vector.y, vector.z);
+
+          // Push the positioned geometry into the array.
+          dotGeometries.push(dotGeometry);
+        }
       }
 
-      const radius = 2.5; // Assuming your globe has a radius of 2.5 units
-      const curve = this.createCurve(startLat, startLon, endLat, endLon, radius);
+      // Merge all the dot geometries together into one buffer geometry
+      const mergedDotGeometries = BufferGeometryUtils.mergeBufferGeometries(dotGeometries);
 
-      // Create the TubeBufferGeometry based on the curve
-      const geometry = new THREE.TubeBufferGeometry(curve, 44, 0.5, 8);
-      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-      const mesh = new THREE.Mesh(geometry, material);
-      this.scene.add(mesh);
+      // Define the material for the dots
+      const dotMaterial = new THREE.MeshBasicMaterial({
+        color: DOT_COLOR,
+        side: THREE.FrontSide
+      });
 
-      // Animate the line drawing
-      geometry.setDrawRange(0, 1); // Start with the first vertex
-      this.drawAnimatedLine(geometry);
-    },
+      const dotMesh = new THREE.Mesh(mergedDotGeometries, dotMaterial);
 
-    drawAnimatedLine(geometry) {
-      const startTime = performance.now();
-      const drawAnimated = () => {
-        const drawRangeCount = geometry.drawRange.count;
-        const timeElapsed = performance.now() - startTime;
-
-        // Animate the curve for 2.5 seconds
-        const progress = timeElapsed / 2500;
-        const newDrawRangeCount = progress * 3000; // Adjust this number based on your geometry
-
-        if (progress < 1) {
-          geometry.setDrawRange(0, newDrawRangeCount);
-          requestAnimationFrame(drawAnimated);
-        }
-      };
-
-      requestAnimationFrame(drawAnimated);
+      return dotMesh;
     },
 
     onWindowResize(camera, renderer) {
@@ -258,19 +263,5 @@ export default {
   background-size: cover;
   z-index: -1;
   /* Ensure this element is rendered behind #container */
-}
-
-.fetch {
-  position: absolute;
-  /* Position the button absolutely within the container */
-  left: 50%;
-  /* Center the button horizontally */
-  bottom: 50px;
-  /* 50px from the bottom of the container */
-  transform: translateX(-50%);
-  /* Offset the button by half its width to center it */
-  z-index: 2;
-  /* Ensure it's above other elements */
-  /* Add additional styling for the button here */
 }
 </style>

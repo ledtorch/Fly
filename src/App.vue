@@ -6,5 +6,3 @@
 <script setup>
 import TheSphere from './components/TheSphere.vue'
 </script>
-
-<style scoped></style>
