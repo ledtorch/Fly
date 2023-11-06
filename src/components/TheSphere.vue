@@ -1,10 +1,8 @@
 <template>
   <div class="frame" ref="frame" />
   <div ref="container" id="container" />
-  <!-- <button @click="fetchFlightData" class="fetch">Fetch Data</button> -->
-  <button @click="drawFlightRoute(37.7749, -122.4194, 25.0330, 121.5654)" class="fetch">Draw Flight Route</button>
-  <!-- SFK (San Francisco) lat/lon: 37.7749, -122.4194 -->
-  <!-- TPE (Taipei) lat/lon: 25.0330, 121.5654 -->
+  <button @click="fetchFlightData" class="fetch">Fetch Data</button>
+  <!-- <button @click="drawFlightRoute(37.7749, -122.4194, 25.0330, 121.5654)" class="fetch">Draw Flight Route</button> -->
 </template>
 
 <script>
@@ -173,6 +171,28 @@ export default {
 
       return coreSphere;
     },
+
+
+    async fetchFlightData() {
+
+      const options = {
+        method: 'GET',
+        url: 'https://timetable-lookup.p.rapidapi.com/airports/',
+        headers: {
+          'X-RapidAPI-Key': 'f3c001f042msh6992a42cead98c0p14099fjsn54a08a21b1ee',
+          'X-RapidAPI-Host': 'timetable-lookup.p.rapidapi.com'
+        }
+      };
+
+      try {
+        const response = await axios.request(options);
+        console.log(response.data);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
+
 
     createCurve(startLat, startLon, endLat, endLon, radius) {
       const startXYZ = toXYZ(startLat, startLon, radius);
