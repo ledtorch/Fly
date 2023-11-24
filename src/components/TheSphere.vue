@@ -1,7 +1,9 @@
 <template>
   <div class="frame" ref="frame" />
   <div ref="container" id="container" />
-  <button @click="fetchFlightData" class="fetch">Fetch Data</button>
+  <!-- <button @click="fetchFlightData" class="fetch">Fetch Data</button> -->
+  <button @click="createTube" class="fetch">Draw TPE to JFK Route</button>
+
   <!-- <button @click="drawFlightRoute(37.7749, -122.4194, 25.0330, 121.5654)" class="fetch">Draw Flight Route</button> -->
 </template>
 
@@ -51,11 +53,17 @@ export default {
       const dotsSphere = this.createDotsSphere();
       scene.add(dotsSphere);
 
+
+      // Add coreSphere
+      const tube = this.createTube();
+      scene.add(tube);
+
       // Wrap model to a unit
       const earthGroup = new THREE.Group();
       // earthGroup.add(coreSphere);
       // earthGroup.add(dotsSphere);
       // earthGroup.add(sampleSphere);
+      earthGroup.add(tube);
       scene.add(earthGroup);
 
       try {
@@ -193,57 +201,55 @@ export default {
     },
 
 
+    // Button and Draw Route
+    // Method to create and add the tube to the scene
 
-    createCurve(startLat, startLon, endLat, endLon, radius) {
-      const startXYZ = toXYZ(startLat, startLon, radius);
-      const endXYZ = toXYZ(endLat, endLon, radius);
+    latLongToVector3(lat, lon, radius) {
+      var phi = (90 - lat) * (Math.PI / 180);
+      var theta = (lon + 270) * (Math.PI / 180);
 
-      // Calculate intermediate control points for the bezier curve
-      const arcHeight = startXYZ.distanceTo(endXYZ) * 0.5 + radius;
-      const controlXYZ1 = toXYZ((startLat + endLat) / 2, (startLon + endLon) / 2, arcHeight);
-      const controlXYZ2 = toXYZ((startLat + endLat) / 2, (startLon + endLon) / 2, arcHeight);
+      var x = -radius * Math.sin(phi) * Math.cos(theta);
+      var y = radius * Math.cos(phi);
+      var z = radius * Math.sin(phi) * Math.sin(theta);
 
-      return new THREE.CubicBezierCurve3(startXYZ, controlXYZ1, controlXYZ2, endXYZ);
+      return new THREE.Vector3(x, y, z);
     },
 
-    drawFlightRoute(startLat, startLon, endLat, endLon) {
-      if (!this.scene) {
-        console.error('The scene is not initialized.');
-        return;
-      }
+    createTube() {
+      // Create the curve with control points
+      // const start = new THREE.Vector3(-5, 0, 0);
+      // const end = new THREE.Vector3(5, 0, 0);
 
-      const radius = 2.5; // Assuming your globe has a radius of 2.5 units
-      const curve = this.createCurve(startLat, startLon, endLat, endLon, radius);
+      const sphereRadius = 2.48; // Sphere radius
+      const TPE_Lat = 25.078193; // Latitude for Taipei
+      const TPE_Lon = 121.235452; // Longitude for Taipei
+      const JFK_Lat = 40.644763; // Latitude for New York JFK
+      const JFK_Lon = -73.779736; // Longitude for New York JFK
+      const control = new THREE.Vector3(0, 5, 0); // Control point for the curve
 
-      // Create the TubeBufferGeometry based on the curve
-      const geometry = new THREE.TubeBufferGeometry(curve, 44, 0.5, 8);
-      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-      const mesh = new THREE.Mesh(geometry, material);
-      this.scene.add(mesh);
+      // Convert latitude and longitude to 3D points on the sphere
+      const start = this.latLongToVector3(TPE_Lat, TPE_Lon, sphereRadius);
+      const end = this.latLongToVector3(JFK_Lat, JFK_Lon, sphereRadius);
 
-      // Animate the line drawing
-      geometry.setDrawRange(0, 1); // Start with the first vertex
-      this.drawAnimatedLine(geometry);
+      // Create the curve
+      const curve = new THREE.QuadraticBezierCurve3(start, control, end);
+
+      // Define TubeGeometry parameters
+      const tubularSegments = 20;
+      const radius = 0.1;
+      const radialSegments = 8;
+      const closed = false;
+
+      // Create the TubeGeometry
+      const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, closed);
+      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Choose your color
+      const tube = new THREE.Mesh(geometry, material);
+
+      return tube;
     },
 
-    drawAnimatedLine(geometry) {
-      const startTime = performance.now();
-      const drawAnimated = () => {
-        const drawRangeCount = geometry.drawRange.count;
-        const timeElapsed = performance.now() - startTime;
 
-        // Animate the curve for 2.5 seconds
-        const progress = timeElapsed / 2500;
-        const newDrawRangeCount = progress * 3000; // Adjust this number based on your geometry
 
-        if (progress < 1) {
-          geometry.setDrawRange(0, newDrawRangeCount);
-          requestAnimationFrame(drawAnimated);
-        }
-      };
-
-      requestAnimationFrame(drawAnimated);
-    },
 
     onWindowResize(camera, renderer) {
       const width = window.innerWidth;
