@@ -2,9 +2,8 @@
   <div class="frame" ref="frame" />
   <div ref="container" id="container" />
   <!-- <button @click="fetchFlightData" class="fetch">Fetch Data</button> -->
-  <button @click="createTube" class="fetch">Draw TPE to JFK Route</button>
-
-  <!-- <button @click="drawFlightRoute(37.7749, -122.4194, 25.0330, 121.5654)" class="fetch">Draw Flight Route</button> -->
+  <!-- <button @click="createTube" class="fetch">Draw TPE to JFK Route</button> -->
+  <!-- <button @click="getcurve" class="fetch">Curve</button> -->
 </template>
 
 <script>
@@ -17,7 +16,11 @@ import { TubeGeometry } from 'three';
 export default {
   mounted() {
     this.initThree();
+
+    // The scene of flights' routes
+    this.initCurveScene();
   },
+
   beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize);
   },
@@ -54,16 +57,16 @@ export default {
       scene.add(dotsSphere);
 
 
-      // Add coreSphere
-      const tube = this.createTube();
-      scene.add(tube);
+      // Add curve
+      const curve = this.getcurve();
+      scene.add(curve);
 
       // Wrap model to a unit
       const earthGroup = new THREE.Group();
       // earthGroup.add(coreSphere);
       // earthGroup.add(dotsSphere);
       // earthGroup.add(sampleSphere);
-      earthGroup.add(tube);
+      earthGroup.add(curve);
       scene.add(earthGroup);
 
       try {
@@ -84,7 +87,7 @@ export default {
       // Animation loop
       const animate = () => {
         requestAnimationFrame(animate);
-        earthGroup.rotation.y += 0.007;
+        earthGroup.rotation.y += 0.005;
         renderer.render(scene, camera);
       };
       animate();
@@ -99,7 +102,7 @@ export default {
 
     async createDotsSphere() {
       // Dots number
-      const DOT_COUNT = 30000;
+      const DOT_COUNT = 32000;
 
       const dotMaterial = new THREE.MeshBasicMaterial({
         color: 0x1B385Bff,
@@ -180,7 +183,6 @@ export default {
       return coreSphere;
     },
 
-
     async fetchFlightData() {
 
       const options = {
@@ -200,11 +202,10 @@ export default {
       }
     },
 
-
     // Button and Draw Route
     // Method to create and add the tube to the scene
-
     latLongToVector3(lat, lon, radius) {
+      // ❓ Don't know how it project to the sphere. The coordinate is NOT correct.
       var phi = (90 - lat) * (Math.PI / 180);
       var theta = (lon + 270) * (Math.PI / 180);
 
@@ -214,7 +215,6 @@ export default {
 
       return new THREE.Vector3(x, y, z);
     },
-
     createTube() {
       // Create the curve with control points
       // const start = new THREE.Vector3(-5, 0, 0);
@@ -236,7 +236,7 @@ export default {
 
       // Define TubeGeometry parameters
       const tubularSegments = 20;
-      const radius = 0.1;
+      const radius = 0.01;
       const radialSegments = 8;
       const closed = false;
 
@@ -248,7 +248,50 @@ export default {
       return tube;
     },
 
+    // Button and Draw Route
+    // Method to create and add the curve to the scene
 
+    initCurveScene() {
+      // Initialize curve scene, camera, and renderer
+      this.curveScene = new THREE.Scene();
+      this.curveRenderer = new THREE.WebGLRenderer({ /* ... */ });
+      // ... other initialization code for curve scene ...
+      // ... append this.curveRenderer.domElement to another container or same with different settings ...
+    },
+
+    getcurve(p1, p2) {
+      let TPE_point = {
+        lat: 25.078193,
+        lon: 121.235452
+      }
+      let JFK_point = {
+        lat: 40.644763,
+        lon: -73.779736
+      }
+      let startPoint = this.latLongToVector3(TPE_point.lat, TPE_point.lon, 2.48);
+      let endPoint = this.latLongToVector3(JFK_point.lat, JFK_point.lon, 2.48);
+
+      let v1 = new THREE.Vector3(startPoint.x, startPoint.y, startPoint.z);
+      let v2 = new THREE.Vector3(endPoint.x, endPoint.y, endPoint.z);
+
+      let points = [v1];
+      for (let i = 1; i < 20; i++) {
+        let interpolated = new THREE.Vector3().lerpVectors(v1, v2, i / 20);
+        interpolated.normalize()
+        // interpolated.multiplyScalar(2.7);
+        interpolated.multiplyScalar(2.48 + 0.2 * Math.sin(Math.PI * i / 20));
+        points.push(interpolated);
+      }
+      points.push(v2);
+
+      let path = new THREE.CatmullRomCurve3(points);
+
+      const geometry = new THREE.TubeGeometry(path, 20, 0.01, 10, false);
+      const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const curve = new THREE.Mesh(geometry, material);
+
+      return curve;
+    },
 
 
     onWindowResize(camera, renderer) {
@@ -265,13 +308,11 @@ export default {
 <style scoped>
 #container {
   position: absolute;
-  /* Changed from fixed to absolute */
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
-  /* Ensure this element is rendered on top of .frame */
 }
 
 .frame {
@@ -283,20 +324,13 @@ export default {
   background: url('/Image/Nebula.jpg') no-repeat center center fixed;
   background-size: cover;
   z-index: -1;
-  /* Ensure this element is rendered behind #container */
 }
 
 .fetch {
   position: absolute;
-  /* Position the button absolutely within the container */
   left: 50%;
-  /* Center the button horizontally */
   bottom: 50px;
-  /* 50px from the bottom of the container */
   transform: translateX(-50%);
-  /* Offset the button by half its width to center it */
   z-index: 2;
-  /* Ensure it's above other elements */
-  /* Add additional styling for the button here */
 }
 </style>
