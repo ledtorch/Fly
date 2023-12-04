@@ -1,103 +1,68 @@
 <template>
   <div class="frame" ref="frame" />
-  <div ref="container" id="container" />
-  <!-- <button @click="fetchFlightData" class="fetch">Fetch Data</button> -->
-  <!-- <button @click="createTube" class="fetch">Draw TPE to JFK Route</button> -->
-  <!-- <button @click="getcurve" class="fetch">Curve</button> -->
+  <div ref="container" id="container" class="upper-container" />
+  <div class="set">
+    <button @click="drawFlightRoute" class="fetch">Curve</button>
+    <button @click="removeFlightRoute" class="remove">Remove</button>
+  </div>
 </template>
 
 <script>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import axios from 'axios';
-import { TubeGeometry } from 'three';
 
 export default {
   mounted() {
     this.initThree();
-
-    // The scene of flights' routes
-    this.initCurveScene();
   },
 
   beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize);
   },
   methods: {
-    async initThree() {
+    initThree() {
       const container = this.$refs.container;
       const width = window.innerWidth;
       const height = window.innerHeight;
 
-      // Create scene, camera and renderer
-      const scene = new THREE.Scene();
+      // Create scene, camera, and renderer
+      this.scene = new THREE.Scene();
+      this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+      this.camera.position.z = 6;
 
-      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-      camera.position.z = 6;
-
-      const renderer = new THREE.WebGLRenderer({
+      this.renderer = new THREE.WebGLRenderer({
         antialias: false,
         alpha: true,
         powerPreference: "high-performance"
       });
-      renderer.setSize(width, height);
-      container.appendChild(renderer.domElement);
+      this.renderer.setSize(width, height);
+      container.appendChild(this.renderer.domElement);
 
-      // Create orbit camera
-      const controls = new OrbitControls(camera, renderer.domElement);
+
+      // Orbit controls
+      const controls = new OrbitControls(this.camera, this.renderer.domElement);
       controls.update();
 
-      // Add coreSphere
-      const coreSphere = this.createCoreSphere();
-      scene.add(coreSphere);
-
-      // Add dotsSphere
-      const dotsSphere = this.createDotsSphere();
-      scene.add(dotsSphere);
-
-
-      // Add curve
-      const curve = this.getcurve();
-      scene.add(curve);
-
-      // Wrap model to a unit
-      const earthGroup = new THREE.Group();
-      // earthGroup.add(coreSphere);
-      // earthGroup.add(dotsSphere);
-      // earthGroup.add(sampleSphere);
-      earthGroup.add(curve);
-      scene.add(earthGroup);
-
-      try {
-        const dotsSphere = await this.createDotsSphere();
-        earthGroup.add(dotsSphere);
-      } catch (error) {
-        console.error('Error creating dots sphere:', error);
-      }
-
-      // Light
+      // Lighting
       const light = new THREE.DirectionalLight(0xffffff, 1);
       light.position.set(1, 1, 1).normalize();
-      scene.add(light);
+      this.scene.add(light);
+
+      // Sphere
+      this.createCoreSphere();
+      this.createDotsSphere();
 
       // Resize listener
-      window.addEventListener('resize', this.onWindowResize.bind(this, camera, renderer));
+      window.addEventListener('resize', this.onWindowResize.bind(this));
 
       // Animation loop
       const animate = () => {
         requestAnimationFrame(animate);
-        earthGroup.rotation.y += 0.005;
-        renderer.render(scene, camera);
+        this.scene.rotation.y += 0.005;
+        controls.update();
+        this.renderer.render(this.scene, this.camera);
       };
       animate();
-
-      // // 🐞 Debug console
-      // console.log('🐞 Debug console');
-      // console.log(dotsSphere);
-      // console.log(coreSphere);
-      // console.log(sampleSphere);
-      // console.log(renderer);
     },
 
     async createDotsSphere() {
@@ -161,7 +126,7 @@ export default {
         }
       }
 
-      return sceneDots;
+      this.scene.add(sceneDots);
     },
 
     createCoreSphere() {
@@ -180,30 +145,23 @@ export default {
       const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
       const coreSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
 
-      return coreSphere;
+      this.scene.add(coreSphere);
+      // return coreSphere;
     },
 
-    async fetchFlightData() {
 
-      const options = {
-        method: 'GET',
-        url: 'https://timetable-lookup.p.rapidapi.com/airports/',
-        headers: {
-          'X-RapidAPI-Key': 'f3c001f042msh6992a42cead98c0p14099fjsn54a08a21b1ee',
-          'X-RapidAPI-Host': 'timetable-lookup.p.rapidapi.com'
-        }
-      };
-
-      try {
-        const response = await axios.request(options);
-        console.log(response.data);
-      } catch (error) {
-        console.error(error);
+    drawFlightRoute() {
+      if (!this.scene) {
+        console.error("Scene is not initialized");
+        return;
       }
+      if (this.curve) {
+        this.scene.remove(this.curve);
+      }
+      this.curve = this.getCurve();
+      this.scene.add(this.curve);
     },
 
-    // Button and Draw Route
-    // Method to create and add the tube to the scene
     latLongToVector3(lat, lon, radius) {
       // ❓ Don't know how it project to the sphere. The coordinate is NOT correct.
       var phi = (90 - lat) * (Math.PI / 180);
@@ -215,51 +173,8 @@ export default {
 
       return new THREE.Vector3(x, y, z);
     },
-    createTube() {
-      // Create the curve with control points
-      // const start = new THREE.Vector3(-5, 0, 0);
-      // const end = new THREE.Vector3(5, 0, 0);
 
-      const sphereRadius = 2.48; // Sphere radius
-      const TPE_Lat = 25.078193; // Latitude for Taipei
-      const TPE_Lon = 121.235452; // Longitude for Taipei
-      const JFK_Lat = 40.644763; // Latitude for New York JFK
-      const JFK_Lon = -73.779736; // Longitude for New York JFK
-      const control = new THREE.Vector3(0, 5, 0); // Control point for the curve
-
-      // Convert latitude and longitude to 3D points on the sphere
-      const start = this.latLongToVector3(TPE_Lat, TPE_Lon, sphereRadius);
-      const end = this.latLongToVector3(JFK_Lat, JFK_Lon, sphereRadius);
-
-      // Create the curve
-      const curve = new THREE.QuadraticBezierCurve3(start, control, end);
-
-      // Define TubeGeometry parameters
-      const tubularSegments = 20;
-      const radius = 0.01;
-      const radialSegments = 8;
-      const closed = false;
-
-      // Create the TubeGeometry
-      const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, closed);
-      const material = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Choose your color
-      const tube = new THREE.Mesh(geometry, material);
-
-      return tube;
-    },
-
-    // Button and Draw Route
-    // Method to create and add the curve to the scene
-
-    initCurveScene() {
-      // Initialize curve scene, camera, and renderer
-      this.curveScene = new THREE.Scene();
-      this.curveRenderer = new THREE.WebGLRenderer({ /* ... */ });
-      // ... other initialization code for curve scene ...
-      // ... append this.curveRenderer.domElement to another container or same with different settings ...
-    },
-
-    getcurve(p1, p2) {
+    getCurve(p1, p2) {
       let TPE_point = {
         lat: 25.078193,
         lon: 121.235452
@@ -290,31 +205,29 @@ export default {
       const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
       const curve = new THREE.Mesh(geometry, material);
 
+      // 🐞 Debug console
+      console.log("Curve position:", curve.position);
+
       return curve;
     },
-
-
-    onWindowResize(camera, renderer) {
+    removeFlightRoute() {
+      if (this.curve) {
+        this.scene.remove(this.curve);
+        this.curve = null; // Clear the reference
+      }
+    },
+    onWindowResize() {
       const width = window.innerWidth;
       const height = window.innerHeight;
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
+      this.camera.aspect = width / height;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(width, height);
     },
   },
 };
 </script>
 
 <style scoped>
-#container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-
 .frame {
   position: fixed;
   top: 0;
@@ -326,9 +239,49 @@ export default {
   z-index: -1;
 }
 
-.fetch {
+
+#container {
   position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+
+
+
+.fetch {
+  /* position: absolute; */
+  flex: 1;
   left: 50%;
+  bottom: 50px;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* .upper-container {
+  pointer-events: none;
+} */
+
+.remove {
+  flex: 1;
+  left: 50%;
+  bottom: 20px;
+  /* Adjust as needed */
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.set {
+  display: flex;
+  /* Enable Flexbox */
+  justify-content: space-between;
+  /* Space between items */
+  position: absolute;
+  gap: 20px;
+  left: 55%;
   bottom: 50px;
   transform: translateX(-50%);
   z-index: 2;
