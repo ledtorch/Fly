@@ -1,7 +1,9 @@
 <template>
   <div class="frame" ref="frame" />
   <div ref="container" id="container" class="upper-container" />
+  <div class="number">There are {{ totalFlightsCount }} people are flying with you</div>
   <div class="set">
+    <input v-model="flightCode" placeholder="Enter Flight Code" class="input" />
     <button @click="drawFlightRoute" class="fetch">Curve</button>
     <button @click="removeFlightRoute" class="remove">Remove</button>
   </div>
@@ -10,12 +12,21 @@
 <script>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import axios from 'axios';
+import airportsData from '../airports.json';
+
 
 export default {
+  data() {
+    return {
+      flightCode: '',
+      totalFlightsCount: 0, // New data property
+    };
+  },
+
   mounted() {
     this.initThree();
   },
-
   beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize);
   },
@@ -58,7 +69,7 @@ export default {
       // Animation loop
       const animate = () => {
         requestAnimationFrame(animate);
-        this.scene.rotation.y += 0.005;
+        this.scene.rotation.y += 0.002;
         controls.update();
         this.renderer.render(this.scene, this.camera);
       };
@@ -67,7 +78,7 @@ export default {
 
     async createDotsSphere() {
       // Dots number
-      const DOT_COUNT = 32000;
+      const DOT_COUNT = 45000;
 
       const dotMaterial = new THREE.MeshBasicMaterial({
         color: 0x1B385Bff,
@@ -111,14 +122,14 @@ export default {
 
         // Get the corresponding pixel color on the map
         // 🏗️ TODO: The issue with UV mapping requires the app to start rendering from "canvas.height - 150" instead of 0
-        const pixelIndex = ((Math.floor(uv.y * (canvas.height - 150)) * canvas.width) + Math.floor(uv.x * (canvas.width))) * 4;
+        const pixelIndex = ((Math.floor(uv.y * (canvas.height - 180)) * canvas.width) + Math.floor(uv.x * (canvas.width))) * 4;
         const r = imageData.data[pixelIndex];
         const g = imageData.data[pixelIndex + 1];
         const b = imageData.data[pixelIndex + 2];
 
         // Map white area to represent land
         if (r === 0 && g === 0 && b === 0) {
-          const dotGeometry = new THREE.CircleGeometry(0.02, 5);
+          const dotGeometry = new THREE.CircleGeometry(0.01, 5);
           const dot = new THREE.Mesh(dotGeometry, dotMaterial);
           dot.position.set(vector.x, vector.y, vector.z);
           dot.lookAt(new THREE.Vector3(0, 0, 0));
@@ -135,9 +146,9 @@ export default {
        Therefore, set transparent: true for all objects in this project.
       */
       const sphereMaterial = new THREE.MeshPhongMaterial({
-        color: 0x162D4C,
+        color: 0x0A2440,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.95,
         depthTest: true,
       });
 
@@ -149,17 +160,47 @@ export default {
       // return coreSphere;
     },
 
+    async drawFlightRoute() {
+      // 🐞 Debug console
+      console.log("Flight Code:", this.flightCode);
 
-    drawFlightRoute() {
-      if (!this.scene) {
-        console.error("Scene is not initialized");
-        return;
+      // Sample code: MU2557, UA395
+      let apiKey = "3a51179136248cb37de3fbcc652bfde4";
+      let baseUrl = "http://api.aviationstack.com/v1/flights";
+      try {
+        const response = await axios.get(`${baseUrl}?access_key=${apiKey}&flight_iata=${this.flightCode}`);
+        const totalFlights = await axios.get(`${baseUrl}?access_key=${apiKey}&flight_status=active`);
+        this.totalFlightsCount = (totalFlights.data.pagination.total * 0.7 * 100).toLocaleString();
+
+        // 🐞 Debug console
+        console.log("response:", response);
+        console.log("responseTotalFlights:", totalFlights.data.pagination.total);
+
+        // Using response.data directly
+        if (response.data && response.data.data && response.data.data.length > 0) {
+          const flight = response.data.data[0];
+
+          // Retrieve airport data from JSON using ICAO codes
+          const departureAirport = airportsData[flight.departure.icao];
+          const arrivalAirport = airportsData[flight.arrival.icao];
+
+          // 🐞 Debug console
+          console.log("Departure Airport Lat/Lon:", departureAirport.lat, departureAirport.lon);
+          console.log("Arrival Airport Lat/Lon:", arrivalAirport.lat, arrivalAirport.lon);
+
+          if (departureAirport && arrivalAirport) {
+            let startPoint = this.latLongToVector3(departureAirport.lat, departureAirport.lon, 2.48);
+            let endPoint = this.latLongToVector3(arrivalAirport.lat, arrivalAirport.lon, 2.48);
+
+            this.curve = this.getCurve(startPoint, endPoint);
+            this.scene.add(this.curve);
+          }
+        } else {
+          console.log("No flight data found for this code.");
+        }
+      } catch (error) {
+        console.error("Error fetching flight data:", error);
       }
-      if (this.curve) {
-        this.scene.remove(this.curve);
-      }
-      this.curve = this.getCurve();
-      this.scene.add(this.curve);
     },
 
     latLongToVector3(lat, lon, radius) {
@@ -174,48 +215,31 @@ export default {
       return new THREE.Vector3(x, y, z);
     },
 
-    getCurve(p1, p2) {
-      let TPE_point = {
-        lat: 25.078193,
-        lon: 121.235452
-      }
-      let JFK_point = {
-        lat: 40.644763,
-        lon: -73.779736
-      }
-      let startPoint = this.latLongToVector3(TPE_point.lat, TPE_point.lon, 2.48);
-      let endPoint = this.latLongToVector3(JFK_point.lat, JFK_point.lon, 2.48);
-
-      let v1 = new THREE.Vector3(startPoint.x, startPoint.y, startPoint.z);
-      let v2 = new THREE.Vector3(endPoint.x, endPoint.y, endPoint.z);
-
-      let points = [v1];
+    getCurve(startPoint, endPoint) {
+      let points = [startPoint];
       for (let i = 1; i < 20; i++) {
-        let interpolated = new THREE.Vector3().lerpVectors(v1, v2, i / 20);
-        interpolated.normalize()
-        // interpolated.multiplyScalar(2.7);
+        let interpolated = new THREE.Vector3().lerpVectors(startPoint, endPoint, i / 20);
+        interpolated.normalize();
         interpolated.multiplyScalar(2.48 + 0.2 * Math.sin(Math.PI * i / 20));
         points.push(interpolated);
       }
-      points.push(v2);
+      points.push(endPoint);
 
       let path = new THREE.CatmullRomCurve3(points);
-
       const geometry = new THREE.TubeGeometry(path, 20, 0.01, 10, false);
       const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const curve = new THREE.Mesh(geometry, material);
-
-      // 🐞 Debug console
-      console.log("Curve position:", curve.position);
-
-      return curve;
+      return new THREE.Mesh(geometry, material);
     },
+
     removeFlightRoute() {
       if (this.curve) {
         this.scene.remove(this.curve);
-        this.curve = null; // Clear the reference
+
+        // Clear the reference
+        this.curve = null;
       }
     },
+
     onWindowResize() {
       const width = window.innerWidth;
       const height = window.innerHeight;
@@ -249,9 +273,6 @@ export default {
   z-index: 1;
 }
 
-
-
-
 .fetch {
   /* position: absolute; */
   flex: 1;
@@ -269,7 +290,6 @@ export default {
   flex: 1;
   left: 50%;
   bottom: 20px;
-  /* Adjust as needed */
   transform: translateX(-50%);
   z-index: 2;
 }
@@ -285,5 +305,35 @@ export default {
   bottom: 50px;
   transform: translateX(-50%);
   z-index: 2;
+}
+
+.number {
+  display: flex;
+  /* Enable Flexbox */
+  justify-content: space-between;
+  /* Space between items */
+  position: absolute;
+  gap: 20px;
+  left: 50%;
+  top: 50px;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.input {
+  flex: 1;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-20%);
+  z-index: 2;
+  display: inline-flex;
+  border-radius: 5px;
+  border: 0px solid;
+
+  background: rgba(255, 255, 255, 0.10);
+
+  display: flex;
+  padding: 0px 8px 0px 8px;
+  align-items: center;
 }
 </style>
