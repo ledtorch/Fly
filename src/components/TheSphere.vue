@@ -161,30 +161,35 @@ export default {
     },
 
     async drawFlightRoute() {
-      // 🐞 Debug console
       console.log("Flight Code:", this.flightCode);
 
-      // Sample code: MU2557, UA395
-      let apiKey = "3a51179136248cb37de3fbcc652bfde4";
-      let baseUrl = "http://api.aviationstack.com/v1/flights";
+      // Airlabs API key and base URL for a specific flight search
+      let apiKey = "37754b2f-3224-4908-b749-00973379bb93";
+      let flightUrl = `https://airlabs.co/api/v9/flight?flight_iata=${this.flightCode}&api_key=${apiKey}`;
+      let flightsUrl = `https://airlabs.co/api/v9/flights?api_key=${apiKey}`;
+
       try {
-        const response = await axios.get(`${baseUrl}?access_key=${apiKey}&flight_iata=${this.flightCode}`);
-        const totalFlights = await axios.get(`${baseUrl}?access_key=${apiKey}&flight_status=active`);
-        this.totalFlightsCount = (totalFlights.data.pagination.total * 0.7 * 100).toLocaleString();
+        // Fetch specific flight data using the Airlabs API
+        const flightResponse = await axios.get(flightUrl);
+        // Fetch total flights data
+        const totalFlightsResponse = await axios.get(flightsUrl);
+        const flights = totalFlightsResponse.data.response;
 
-        // 🐞 Debug console
-        console.log("response:", response);
-        console.log("responseTotalFlights:", totalFlights.data.pagination.total);
+        // Parse total flights count
+        // Note: This needs adjustment based on the actual data structure returned by the API
+        this.totalFlightsCount = (flights.length * 69).toLocaleString(); // Update this logic based on API response
 
-        // Using response.data directly
-        if (response.data && response.data.data && response.data.data.length > 0) {
-          const flight = response.data.data[0];
+        console.log("Flight URL:", flightUrl);
+        console.log("Flights URL:", flightsUrl);
+        console.log("Flights:", flights.length);
+
+        if (flightResponse.data && flightResponse.data.response) {
+          const flight = flightResponse.data.response;
 
           // Retrieve airport data from JSON using ICAO codes
-          const departureAirport = airportsData[flight.departure.icao];
-          const arrivalAirport = airportsData[flight.arrival.icao];
+          const departureAirport = airportsData[flight.dep_icao];
+          const arrivalAirport = airportsData[flight.arr_icao];
 
-          // 🐞 Debug console
           console.log("Departure Airport Lat/Lon:", departureAirport.lat, departureAirport.lon);
           console.log("Arrival Airport Lat/Lon:", arrivalAirport.lat, arrivalAirport.lon);
 
@@ -199,7 +204,7 @@ export default {
           console.log("No flight data found for this code.");
         }
       } catch (error) {
-        console.error("Error fetching flight data:", error);
+        console.error("Error fetching flight data from Airlabs:", error);
       }
     },
 
