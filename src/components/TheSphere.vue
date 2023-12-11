@@ -1,6 +1,6 @@
 <template>
   <div ref="container" id="container" class="upper-container" />
-  <div class="number">There are {{ totalFlightsCount }} people are flying with you</div>
+  <div class="number">There are {{ totalFlightsCount }} people flying with you</div>
   <div class="set">
     <input v-model="flightCode" placeholder="Enter Flight Code" class="input" />
     <button @click="drawFlightRoute" class="fetch">Curve</button>
@@ -18,7 +18,7 @@ export default {
   data() {
     return {
       flightCode: '',
-      totalFlightsCount: 0, // New data property
+      totalFlightsCount: 0,
     };
   },
 
@@ -42,7 +42,7 @@ export default {
       this.camera.position.z = 6;
 
       this.renderer = new THREE.WebGLRenderer({
-        antialias: true, // Enable antialiasing
+        antialias: true,
         alpha: true,
         powerPreference: "high-performance"
       });
@@ -250,6 +250,7 @@ export default {
 
         console.log("Flight URL:", flightUrl);
         console.log("Flights URL:", flightsUrl);
+        console.log("flightResponse:", flightResponse.data);
         console.log("Flights:", flights.length);
 
         if (flightResponse.data && flightResponse.data.response) {
