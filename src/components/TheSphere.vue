@@ -1,11 +1,12 @@
 <template>
-  <div class="frame" ref="frame" />
-  <div ref="container" id="container" class="upper-container" />
-  <div class="number">There are {{ totalFlightsCount }} people are flying with you</div>
-  <div class="set">
-    <input v-model="flightCode" placeholder="Enter Flight Code" class="input" />
-    <button @click="drawFlightRoute" class="fetch">Curve</button>
-    <button @click="removeFlightRoute" class="remove">Remove</button>
+  <div class="frame">
+    <div ref="container" id="container" class="upper-container" />
+    <div class="number">There are {{ totalFlightsCount }} people are flying with you</div>
+    <div class="set">
+      <input v-model="flightCode" placeholder="Enter Flight Code" class="input" />
+      <button @click="drawFlightRoute" class="fetch">Curve</button>
+      <button @click="removeFlightRoute" class="remove">Remove</button>
+    </div>
   </div>
 </template>
 
@@ -14,7 +15,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import axios from 'axios';
 import airportsData from '../airports.json';
-
 
 export default {
   data() {
@@ -27,9 +27,11 @@ export default {
   mounted() {
     this.initThree();
   },
+
   beforeDestroy() {
     window.removeEventListener('resize', this.onWindowResize);
   },
+
   methods: {
     initThree() {
       const container = this.$refs.container;
@@ -42,11 +44,15 @@ export default {
       this.camera.position.z = 6;
 
       this.renderer = new THREE.WebGLRenderer({
-        antialias: false,
+        antialias: true, // Enable antialiasing
         alpha: true,
         powerPreference: "high-performance"
       });
+
       this.renderer.setSize(width, height);
+      // Set a dark background color
+      this.renderer.setClearColor(0x121215);
+
       container.appendChild(this.renderer.domElement);
 
 
@@ -54,10 +60,30 @@ export default {
       const controls = new OrbitControls(this.camera, this.renderer.domElement);
       controls.update();
 
-      // Lighting
-      const light = new THREE.DirectionalLight(0xffffff, 1);
-      light.position.set(1, 1, 1).normalize();
-      this.scene.add(light);
+      // Directional Light - Sunlight
+      const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+      sunLight.position.set(5, 3, 5);
+      this.scene.add(sunLight);
+
+      // Ambient Light
+      const ambientLight = new THREE.AmbientLight(0x1D8EB8, 1);
+      this.scene.add(ambientLight);
+
+      // Stars background
+      const starsGeometry = new THREE.BufferGeometry();
+      const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.7 });
+      const starsVertices = [];
+
+      for (let i = 0; i < 1000; i++) {
+        const x = (Math.random() - 0.5) * 2000;
+        const y = (Math.random() - 0.5) * 2000;
+        const z = (Math.random() - 0.5) * 2000;
+        starsVertices.push(x, y, z);
+      }
+
+      starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+      const starField = new THREE.Points(starsGeometry, starsMaterial);
+      this.scene.add(starField);
 
       // Sphere
       this.createCoreSphere();
@@ -80,23 +106,18 @@ export default {
       // Dots number
       const DOT_COUNT = 45000;
 
-      const dotMaterial = new THREE.MeshBasicMaterial({
-        color: 0x1B385Bff,
-        depthTest: false,
-        transparent: true,
-        side: THREE.BackSide,
-      });
-
       // Load the color-coded image then get each pixel’s color
       const loader = new THREE.TextureLoader();
       const texture = await new Promise((resolve, reject) => {
+        const imagePath = import.meta.env.DEV ? '/Image/map.png' : '/app/fly/Image/map.png';
         loader.load(
-          '/Image/map.png',
-          resolve,  // onLoad callback
-          reject  // onError callback
+          imagePath,
+          // onLoad callback
+          resolve,
+          // onError callback
+          reject
         );
       });
-      // const texture = loader.load('/Image/map.png');
 
       const image = texture.image;
       const canvas = document.createElement('canvas');
@@ -129,6 +150,17 @@ export default {
 
         // Map white area to represent land
         if (r === 0 && g === 0 && b === 0) {
+          // Generate random opacity between 0.2 and 0.5
+          const randomOpacity = 0.2 + Math.random() * 0.3;
+
+          const dotMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            opacity: randomOpacity,
+            depthTest: false,
+            transparent: true,
+            side: THREE.BackSide,
+          });
+
           const dotGeometry = new THREE.CircleGeometry(0.01, 5);
           const dot = new THREE.Mesh(dotGeometry, dotMaterial);
           dot.position.set(vector.x, vector.y, vector.z);
@@ -141,14 +173,17 @@ export default {
     },
 
     createCoreSphere() {
-      /* 
-       Opaque objects are drawn first, followed by transparent objects.
-       Therefore, set transparent: true for all objects in this project.
-      */
+      const imagePath = import.meta.env.DEV ? '/Image/ocean.jpg' : '/app/fly/Image/ocean.jpg';
+
+      // Load the texture
+      const textureLoader = new THREE.TextureLoader();
+      const sphereTexture = textureLoader.load(imagePath);
+
       const sphereMaterial = new THREE.MeshPhongMaterial({
-        color: 0x0A2440,
-        transparent: true,
-        opacity: 0.95,
+        // Dark blue color to filter the texture
+        color: 0x1E8CE7,
+        map: sphereTexture,
+        shininess: 0,
         depthTest: true,
       });
 
@@ -157,7 +192,43 @@ export default {
       const coreSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
 
       this.scene.add(coreSphere);
-      // return coreSphere;
+
+      // Atmosphere
+      // Vertex shader
+      const vertexShader =
+        `
+        varying vec3 vertexNormal;
+
+        void main() {
+          vertexNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `;
+
+      // Fragment shader
+      const fragmentShader =
+        `
+        varying vec3 vertexNormal;
+
+        void main() {
+          float intensity = pow(0.7 - dot(vertexNormal, vec3(0, 0, 1)), 2.0);
+          gl_FragColor = vec4(0.0, 0.5, 1.0, 1.0) * intensity;
+        }
+      `;
+
+      // Create the atmosphere material
+      const atmosphereMaterial = new THREE.ShaderMaterial({
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending,
+        transparent: true
+      });
+
+      // Create the atmosphere sphere
+      const atmosphereGeometry = new THREE.SphereGeometry(2.7, 32, 32); // Slightly larger than the Earth sphere
+      const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+      this.scene.add(atmosphere);
     },
 
     async drawFlightRoute() {
@@ -177,7 +248,7 @@ export default {
 
         // Parse total flights count
         // Note: This needs adjustment based on the actual data structure returned by the API
-        this.totalFlightsCount = (flights.length * 69).toLocaleString(); // Update this logic based on API response
+        this.totalFlightsCount = (flights.length * 99).toLocaleString(); // Update this logic based on API response
 
         console.log("Flight URL:", flightUrl);
         console.log("Flights URL:", flightsUrl);
@@ -220,7 +291,45 @@ export default {
       return new THREE.Vector3(x, y, z);
     },
 
+    getRandomLightColor() {
+      // Full range of hue
+      const hue = Math.random();
+      // Higher saturation avoids pale colors
+      const saturation = 0.7 + Math.random() * 0.3;
+      // Adjust lightness to avoid white and very light colors
+      const lightness = 0.5 + Math.random() * 0.4;
+
+      return new THREE.Color(`hsl(${hue * 360}, ${saturation * 100}%, ${lightness * 100}%)`);
+    },
+
+
     getCurve(startPoint, endPoint) {
+      // Generate a random light color
+      const randomColor = this.getRandomLightColor();
+
+      // Create rings at the start and end points
+      const ringGeometry = new THREE.RingGeometry(0.02, 0.025, 32); // Adjust size as needed
+      const ringMaterial = new THREE.MeshBasicMaterial({ color: randomColor, side: THREE.DoubleSide });
+
+      const startRing = new THREE.Mesh(ringGeometry, ringMaterial);
+      startRing.position.copy(startPoint);
+      startRing.lookAt(new THREE.Vector3()); // Oriented towards the center of the sphere
+
+      const endRing = new THREE.Mesh(ringGeometry, ringMaterial);
+      endRing.position.copy(endPoint);
+      endRing.lookAt(new THREE.Vector3()); // Oriented towards the center of the sphere
+
+      // Create ring-points
+      const pointGeometry = new THREE.SphereGeometry(0.01, 32, 32); // Sphere geometry for the points
+      const pointMaterial = new THREE.MeshBasicMaterial({ color: randomColor });
+
+      const startPointSphere = new THREE.Mesh(pointGeometry, pointMaterial);
+      startPointSphere.position.copy(startPoint);
+
+      const endPointSphere = new THREE.Mesh(pointGeometry, pointMaterial);
+      endPointSphere.position.copy(endPoint);
+
+      // Create the curve
       let points = [startPoint];
       for (let i = 1; i < 20; i++) {
         let interpolated = new THREE.Vector3().lerpVectors(startPoint, endPoint, i / 20);
@@ -231,17 +340,40 @@ export default {
       points.push(endPoint);
 
       let path = new THREE.CatmullRomCurve3(points);
-      const geometry = new THREE.TubeGeometry(path, 20, 0.01, 10, false);
-      const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      return new THREE.Mesh(geometry, material);
+      const geometry = new THREE.TubeGeometry(path, 20, 0.005, 10, false);
+      const curveMaterial = new THREE.MeshBasicMaterial({ color: randomColor });
+      const curve = new THREE.Mesh(geometry, curveMaterial);
+
+      // Add rings, points, and curve to the scene
+      this.scene.add(startRing);
+      this.scene.add(endRing);
+      this.scene.add(startPointSphere);
+      this.scene.add(endPointSphere);
+      this.scene.add(curve);
+
+      // Store references to all created objects for later removal
+      this.curveComponents = {
+        curve,
+        startRing,
+        endRing,
+        startPointSphere,
+        endPointSphere
+      };
+
+      return curve;
     },
 
     removeFlightRoute() {
-      if (this.curve) {
-        this.scene.remove(this.curve);
+      if (this.curveComponents) {
+        // Remove all components of the curve
+        this.scene.remove(this.curveComponents.curve);
+        this.scene.remove(this.curveComponents.startRing);
+        this.scene.remove(this.curveComponents.endRing);
+        this.scene.remove(this.curveComponents.startPointSphere);
+        this.scene.remove(this.curveComponents.endPointSphere);
 
         // Clear the reference
-        this.curve = null;
+        this.curveComponents = null;
       }
     },
 
@@ -258,14 +390,14 @@ export default {
 
 <style scoped>
 .frame {
-  position: fixed;
+  /* position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background: url('/Image/Nebula.jpg') no-repeat center center fixed;
   background-size: cover;
-  z-index: -1;
+  z-index: -1; */
 }
 
 
@@ -287,10 +419,6 @@ export default {
   z-index: 2;
 }
 
-/* .upper-container {
-  pointer-events: none;
-} */
-
 .remove {
   flex: 1;
   left: 50%;
@@ -301,9 +429,7 @@ export default {
 
 .set {
   display: flex;
-  /* Enable Flexbox */
   justify-content: space-between;
-  /* Space between items */
   position: absolute;
   gap: 20px;
   left: 55%;
@@ -314,15 +440,15 @@ export default {
 
 .number {
   display: flex;
-  /* Enable Flexbox */
   justify-content: space-between;
-  /* Space between items */
   position: absolute;
   gap: 20px;
   left: 50%;
   top: 50px;
   transform: translateX(-50%);
   z-index: 2;
+
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .input {
@@ -335,10 +461,15 @@ export default {
   border-radius: 5px;
   border: 0px solid;
 
+  color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.10);
 
   display: flex;
   padding: 0px 8px 0px 8px;
   align-items: center;
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 </style>

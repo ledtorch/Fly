@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Demo site url
   base: '/app/fly/',
   plugins: [vue()],
 })
