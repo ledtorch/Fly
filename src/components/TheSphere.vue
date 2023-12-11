@@ -1,12 +1,10 @@
 <template>
-  <div class="frame">
-    <div ref="container" id="container" class="upper-container" />
-    <div class="number">There are {{ totalFlightsCount }} people are flying with you</div>
-    <div class="set">
-      <input v-model="flightCode" placeholder="Enter Flight Code" class="input" />
-      <button @click="drawFlightRoute" class="fetch">Curve</button>
-      <button @click="removeFlightRoute" class="remove">Remove</button>
-    </div>
+  <div ref="container" id="container" class="upper-container" />
+  <div class="number">There are {{ totalFlightsCount }} people are flying with you</div>
+  <div class="set">
+    <input v-model="flightCode" placeholder="Enter Flight Code" class="input" />
+    <button @click="drawFlightRoute" class="fetch">Curve</button>
+    <!-- <button @click="removeFlightRoute" class="remove">Remove</button> -->
   </div>
 </template>
 
@@ -377,30 +375,37 @@ export default {
       }
     },
 
+    // onWindowResize() {
+    //   const width = window.innerWidth;
+    //   const height = window.innerHeight;
+    //   this.camera.aspect = width / height;
+    //   this.camera.updateProjectionMatrix();
+    //   this.renderer.setSize(width, height);
+    // },
+
     onWindowResize() {
       const width = window.innerWidth;
       const height = window.innerHeight;
+
+      // Adjust the field of view for mobile devices
+      if (width <= 430) {
+        this.camera.fov = 105;
+      } else if (430 < width < 768) {
+        this.camera.fov = 75;
+      } else {
+        this.camera.fov = 40;
+      }
+
       this.camera.aspect = width / height;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(width, height);
     },
+
   },
 };
 </script>
 
 <style scoped>
-.frame {
-  /* position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: url('/Image/Nebula.jpg') no-repeat center center fixed;
-  background-size: cover;
-  z-index: -1; */
-}
-
-
 #container {
   position: absolute;
   top: 0;
@@ -432,7 +437,7 @@ export default {
   justify-content: space-between;
   position: absolute;
   gap: 20px;
-  left: 55%;
+  left: 52%;
   bottom: 50px;
   transform: translateX(-50%);
   z-index: 2;
