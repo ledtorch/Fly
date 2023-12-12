@@ -32,8 +32,13 @@ export default {
 
   methods: {
     initThree() {
-      // 
+      /*
+        Access the DOM element referenced by 'ref="container"'
+        This integrates Vue with Three.js by using 'ref' to keep a reference to specific DOM elements
+        In conclusion, Three.js renders its graphics within this DOM element
+      */
       const container = this.$refs.container;
+
       const width = window.innerWidth;
       const height = window.innerHeight;
 
@@ -48,12 +53,11 @@ export default {
         powerPreference: "high-performance"
       });
 
+      // Renderer settings
       this.renderer.setSize(width, height);
-      // Set a dark background color
       this.renderer.setClearColor(0x121215);
 
       container.appendChild(this.renderer.domElement);
-
 
       // Orbit controls
       const controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -65,10 +69,12 @@ export default {
       this.scene.add(sunLight);
 
       // Ambient Light
+      // Correct color aberration with blue light #1D8EB8
       const ambientLight = new THREE.AmbientLight(0x1D8EB8, 1);
       this.scene.add(ambientLight);
 
       // Stars background
+      // 🏗️ TODO: The stars are still square and sometimes too large
       const starsGeometry = new THREE.BufferGeometry();
       const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.7 });
       const starsVertices = [];
@@ -92,6 +98,9 @@ export default {
       window.addEventListener('resize', this.onWindowResize.bind(this));
 
       // Animation loop
+      /*
+        Chrome has the best performance unlike Safari. The rotation speed is faster on Chrome but slower on Safari
+      */
       const animate = () => {
         requestAnimationFrame(animate);
         this.scene.rotation.y += 0.002;
@@ -108,6 +117,7 @@ export default {
       // Load the color-coded image then get each pixel’s color
       const loader = new THREE.TextureLoader();
       const texture = await new Promise((resolve, reject) => {
+        // local & prod URL
         const imagePath = import.meta.env.DEV ? '/Image/map.png' : '/app/fly/Image/map.png';
         loader.load(
           imagePath,
@@ -172,6 +182,7 @@ export default {
     },
 
     createCoreSphere() {
+      // local & prod URL
       const imagePath = import.meta.env.DEV ? '/Image/ocean.jpg' : '/app/fly/Image/ocean.jpg';
 
       // Load the texture
@@ -179,7 +190,7 @@ export default {
       const sphereTexture = textureLoader.load(imagePath);
 
       const sphereMaterial = new THREE.MeshPhongMaterial({
-        // Dark blue color to filter the texture
+        // Dark blue color, #1E8CE7, to filter the texture
         color: 0x1E8CE7,
         map: sphereTexture,
         shininess: 0,
@@ -194,8 +205,7 @@ export default {
 
       // Atmosphere
       // Vertex shader
-      const vertexShader =
-        `
+      const vertexShader = `
         varying vec3 vertexNormal;
 
         void main() {
@@ -205,8 +215,7 @@ export default {
       `;
 
       // Fragment shader
-      const fragmentShader =
-        `
+      const fragmentShader = `
         varying vec3 vertexNormal;
 
         void main() {
@@ -247,7 +256,7 @@ export default {
 
         // Parse total flights count
         // Note: This needs adjustment based on the actual data structure returned by the API
-        this.totalFlightsCount = (flights.length * 99).toLocaleString(); // Update this logic based on API response
+        this.totalFlightsCount = (flights.length * 99).toLocaleString();
 
         console.log("Flight URL:", flightUrl);
         console.log("Flights URL:", flightsUrl);
