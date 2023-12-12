@@ -350,7 +350,7 @@ export default {
       this.scene.add(endPointSphere);
       this.scene.add(curve);
 
-      // Store references to all created objects for later removal
+      // 🏗️ Store references to all created objects for later removal
       this.curveComponents = {
         curve,
         startRing,
@@ -362,6 +362,7 @@ export default {
       return curve;
     },
 
+    // 🏗️ Doesn't work for removing comps
     removeFlightRoute() {
       if (this.curveComponents) {
         // Remove all components of the curve
@@ -376,19 +377,11 @@ export default {
       }
     },
 
-    // onWindowResize() {
-    //   const width = window.innerWidth;
-    //   const height = window.innerHeight;
-    //   this.camera.aspect = width / height;
-    //   this.camera.updateProjectionMatrix();
-    //   this.renderer.setSize(width, height);
-    // },
-
     onWindowResize() {
       const width = window.innerWidth;
       const height = window.innerHeight;
 
-      // Adjust the field of view for mobile devices
+      // Adjust the field of view(fov) to be RWD
       if (width <= 430) {
         this.camera.fov = 105;
       } else if (430 < width < 768) {
