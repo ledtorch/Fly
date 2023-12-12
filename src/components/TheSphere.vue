@@ -407,6 +407,7 @@ export default {
 </script>
 
 <style scoped>
+/* Container */
 #container {
   position: absolute;
   top: 0;
@@ -416,8 +417,19 @@ export default {
   z-index: 1;
 }
 
+.set {
+  display: flex;
+  justify-content: space-between;
+  position: absolute;
+  gap: 20px;
+  left: 52%;
+  bottom: 50px;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+/* Button */
 .fetch {
-  /* position: absolute; */
   flex: 1;
   left: 50%;
   bottom: 50px;
@@ -433,49 +445,38 @@ export default {
   z-index: 2;
 }
 
-.set {
-  display: flex;
-  justify-content: space-between;
-  position: absolute;
-  gap: 20px;
-  left: 52%;
-  bottom: 50px;
-  transform: translateX(-50%);
-  z-index: 2;
-}
-
-.number {
-  display: flex;
-  justify-content: space-between;
-  position: absolute;
-  gap: 20px;
-  left: 50%;
-  top: 50px;
-  transform: translateX(-50%);
-  z-index: 2;
-
-  color: rgba(255, 255, 255, 0.9);
-}
-
+/* Form */
 .input {
   flex: 1;
   left: 50%;
   bottom: 20px;
   transform: translateX(-20%);
   z-index: 2;
-  display: inline-flex;
+  display: flex;
+  padding: 0px 8px 0px 8px;
+  align-items: center;
+
   border-radius: 5px;
   border: 0px solid;
 
   color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.10);
-
-  display: flex;
-  padding: 0px 8px 0px 8px;
-  align-items: center;
 }
 
 .input::placeholder {
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* Others */
+.number {
+  position: absolute;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  left: 50%;
+  top: 50px;
+  transform: translateX(-50%);
+  z-index: 2;
+  color: rgba(255, 255, 255, 0.9);
 }
 </style>
