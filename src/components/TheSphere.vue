@@ -32,6 +32,7 @@ export default {
 
   methods: {
     initThree() {
+      // 
       const container = this.$refs.container;
       const width = window.innerWidth;
       const height = window.innerHeight;

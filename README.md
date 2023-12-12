@@ -1,4 +1,11 @@
 # Project Overview
+This project, named "Whom Are Flying With You," aims to visualize your travel routes, showing where you're flying to or from. It also provides data about how many people are flying with you. 
+
+Flying in the sky for long distances can be a lonely experience. You can only see the passengers and crew on the vessel. I want to alleviate this loneliness. Surprisingly, few people know that approximately a million people are in the sky at any given time.
+
+Briefly, it's a project that visualizes your journey with data.
+
+----
 
 ## Keywords
 - Three.js Globe Sphere Dots
@@ -54,3 +61,6 @@ yarn add postcss autoprefixer --dev
 # Feature Dependencies
 yarn add axios
 ```
+
+#### Sample flight code: 
+NH110, B61724, NH110, AA142, DL1538, DL4835, B6881, B62201, B6219, AA4565
